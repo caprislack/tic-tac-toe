@@ -1,7 +1,8 @@
 <?php
 
-echo "Hello World";
-exit;
+    print_r($_REQUEST);
+
+    echo "Hello World!";
+    exit;
 
 ?>
-
