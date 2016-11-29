@@ -12,7 +12,7 @@ function connectToDb() {
     $dbName = $dbopts["path"];
 
     try {
-        $conn = new PDO("pgsql:host=$servername;dbname" . ltrim($dbopts["path"],'/') . "port=$port", $username, $password);
+        $conn = new PDO("pgsql:host=$servername;dbname=" . ltrim($dbopts["path"],'/') . ";port=$port", $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         echo"Connected successfully";
