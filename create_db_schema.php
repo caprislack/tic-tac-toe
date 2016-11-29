@@ -2,7 +2,7 @@
 
 connectToDb();
 function connectToDb() {
-    $dbopts = parse_url(getenv('DATABASE_URL'));
+    $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
     print_r($dbopts);
 
     $servername = $dbopts["host"];
@@ -12,9 +12,7 @@ function connectToDb() {
     $dbName = $dbopts["path"];
 
     try {
-        $conn = new PDO("pgsql:host=$servername;dbname=" . ltrim($dbopts["path"],'/') . ";port=$port", $username, $password);
-        // set the PDO error mode to exception
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $conn = new mysqli($servername, $username, $password, $dbName);
         echo"Connected successfully";
         $conn->exec("CREATE TABLE `open_games` (
   `team_id` varchar(11) NOT NULL,
