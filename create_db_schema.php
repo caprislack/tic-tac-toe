@@ -3,7 +3,7 @@
 connectToDb();
 function connectToDb() {
     $dbopts = parse_url(getenv('DATABASE_URL'));
-    println($dbopts);
+    print_r($dbopts);
 
     $servername = $dbopts["host"];
     $username = $dbopts["user"];
