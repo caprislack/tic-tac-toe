@@ -186,18 +186,6 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
     $text = $request['text'];
     $responseUrl = $request['response_url'];
 
-    $conn->query("drop table open_games");
-    $conn->query("CREATE TABLE `open_games` (
-  `team_id` varchar(11) NOT NULL,
-  `team_name` varchar(100) NOT NULL,
-  `channel_id` varchar(11) NOT NULL,
-  `channel_name` varchar(100) NOT NULL,
-  `initiating_user` varchar(100) NOT NULL,
-  `initiating_user_name` varchar(100) NOT NULL,
-  `other_user` varchar(100) NOT NULL,
-  `other_user_name` varchar(100) NOT NULL,
-  `current_player` tinyint(4) NOT NULL,
-  `board` varchar(100) NOT NULL");
     $query = "select * from open_games where team_id = '$teamId' and channel_id = '$channelId'";
     //echo"query = " . $query . "\n";
 
