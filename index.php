@@ -140,7 +140,7 @@ class TicTacToeGame {
     }
 
     private function checkDraw() {
-        return preg_match("/[1-2]{9}/", $this->board);
+        return preg_match("/[\\sXO]{9}/", $this->board);
     }
 
     function getStatus() {
