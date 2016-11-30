@@ -8,8 +8,6 @@ function connectToDb() {
     global $conn;
 
     $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
-    print_r($dbopts);
-
     $servername = $dbopts["host"];
     $username = $dbopts["user"];
     $password = $dbopts["pass"];
@@ -19,8 +17,6 @@ function connectToDb() {
         $conn = new PDO("mysql:host=$servername;dbname=" . ltrim($dbName,'/'), $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        //echo"Connected successfully";
     }
     catch(PDOException $e)
     {
@@ -275,7 +271,8 @@ function testInit() {
     $request['command'] = '/ttt';
     $request['text'] = '@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
-    return $request;
+    return $_REQUEST;
+    //return $request;
 }
 
 function verify($condition, $message) {
