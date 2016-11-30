@@ -86,7 +86,7 @@ class TicTacToeApplication {
         }
     }
 
-    function getBoardFromDb($deleteIfCompleted=false) {
+    private function getBoardFromDb($deleteIfCompleted=false) {
 
         $teamId = $this->request['team_id'];
         $channelId = $this->request['channel_id'];
@@ -96,10 +96,9 @@ class TicTacToeApplication {
         if ($results->rowCount() == 0) {
             return null;
         } else {
-            Utilities::verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
+            Utilities::verify($results->rowCount() == 1, "Internal Exception.  Found more than 1 row for a game.");
 
             foreach ($results as $row) {
-                // print_r($row);
                 $game = new TicTacToeGame(
                     $this->dbConnection,
                     $row['team_id'],
@@ -114,8 +113,6 @@ class TicTacToeApplication {
 
                 if ($deleteIfCompleted && ($row['current_player']  == 2 || $row['current_player'] == 3 || $row['current_player'] == 4)) {
                     $deleteQuery = "delete from open_games where team_id = '$teamId' and channel_id = '$channelId' limit 1";
-                    // echo "query = " . $deleteQuery . "\n";
-                    // echo "about to delete existing row bc its done\n";
                     $this->dbConnection->query($deleteQuery);
                     return null;
                 } else {
@@ -125,7 +122,7 @@ class TicTacToeApplication {
         }
     }
 
-    function createTicTacToeGame($user2) {
+    private function createTicTacToeGame($username2) {
         $oldBoard = $this->getBoardFromDb(true);
         $status = $oldBoard ? $oldBoard->getStatus() : "";
         Utilities::verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
@@ -135,32 +132,25 @@ class TicTacToeApplication {
             $this->request['team_id'],
             $this->request['channel_id'],
             1,
-            $this->request['user_id'],
             $this->request['user_name'],
-            1111,
-            $user2
+            $username2
         );
         $game->saveToDb();
         return $game;
     }
 
-    function displayTicTacToeGame() {
-
+    private function displayTicTacToeGame() {
         $board = $this->getBoardFromDb($this->request);
         Utilities::verify(!is_null($board), "There is no ongoing game.");
         return $board;
     }
 
-    function playTicTacToeGame($position) {
-
+    private function playTicTacToeGame($position) {
         $board = $this->getBoardFromDb($this->request);
-
         Utilities::verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
-
         $board->play($position, $this->request['user_name']);
         $board->saveToDb();
         return $board;
-
     }
 }
 
@@ -170,9 +160,7 @@ class TicTacToeGame {
     private $channelId;
     private $currentPlayer;
     private $board;
-    private $user1;
     private $username1;
-    private $user2;
     private $username2;
 
     private $map = ['a1' => 6, 'a2' => 3, 'a3' => 0, 'b1' => 7, 'b2' => 4, 'b3' => 1, 'c1' => 8, 'c2' => 5, 'c3' => 2];
@@ -181,56 +169,65 @@ class TicTacToeGame {
     private $playerToName = [];
     private $dbConnection;
 
-    function __construct($dbConnection, $teamId=null, $channelId=null, $currentPlayer=1, $user1=null, $username1=null, $user2=null, $username2=null, $board='         ') {
+    const PLAYER1_TURN = 0;
+    const PLAYER2_TURN = 1;
+    const PLAYER1_WON = 2;
+    const PLAYER2_WON = 3;
+    const DRAW = 4;
+
+    function __construct($dbConnection, $teamId=null, $channelId=null, $currentPlayer=1, $username1=null, $username2=null, $board='         ') {
+        $this->dbConnection = $dbConnection;
         $this->teamId = $teamId;
         $this->channelId = $channelId;
         $this->currentPlayer = $currentPlayer;
-        $this->user1 = $user1;
         $this->username1 = $username1;
-        $this->user2 = $user2;
         $this->username2 = $username2;
         $this->board = $board;
 
         $this->playerToName[0] = $this->username1;
         $this->playerToName[1] = $this->username2;
-        $this->dbConnection = $dbConnection;
     }
 
     function saveToDb() {
 
         $query = "insert into
-                    open_games (`team_id`, `channel_id`, `initiating_user`, `initiating_user_name`, `other_user`, `other_user_name`, `current_player`, `board`)
-                    values ('$this->teamId', '$this->channelId', '$this->user1', '$this->username1', '$this->user2', '$this->username2', '$this->currentPlayer', '$this->board')
+                    open_games (
+                      `team_id`, 
+                      `channel_id`, 
+                      `initiating_user_name`, 
+                      `other_user_name`, 
+                      `current_player`, 
+                      `board`
+                    )
+                    values (
+                      '$this->teamId', 
+                      '$this->channelId', 
+                      '$this->username1', 
+                      '$this->username2', 
+                      '$this->currentPlayer', 
+                      '$this->board'
+                    )
                     on duplicate key
                     update current_player='$this->currentPlayer', board='$this->board'";
-        // echo "query = " . $query . "\n";
         $this->dbConnection->query($query);
     }
 
-    function play($square, $userName)
-    {
+    function play($square, $userName) {
+
         Utilities::verify(
             $userName == $this->playerToName[$this->currentPlayer],
-            "<@" . $userName . ">, it's not your turn!  It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn"
+            "It's not your turn!  It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn"
         );
         Utilities::verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
 
-//         echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
         $index = $this->map[$square];
-//         echo "about to replace index = " . $index . "\n";
         $currentCharacter = substr($this->board, $index, 1);
-//         echo "character we're about to replace = " . $currentCharacter . "\n";
         Utilities::verify($currentCharacter == ' ', "Playing in a space that's already taken.  \n\n" . $this->getStatus());
         $this->board = substr_replace($this->board, $this->playerToCharacter[$this->currentPlayer], $index, 1);
 
-        // echo "board = " . $this->board . "\n";
-
-        // check if winning board & update $currentPlayer var
         if ($this->checkWinner($this->playerToCharacter[$this->currentPlayer])) {
-            // echo "PLAYER $this->currentPlayer WON!\n";
             $this->currentPlayer += 2;
         } else if ($this->checkDraw()) {
-            // echo "DRAW!\n";
             $this->currentPlayer = 4;
         } else {
             if ($this->currentPlayer == 0) {
@@ -242,14 +239,23 @@ class TicTacToeGame {
     }
 
     private function checkWinner($user) {
-        return preg_match("/" . $user . "{3}[\\sXO]{6}/", $this->board) ||
-        preg_match("/[\\sXO]{3}" . $user . "{3}[\\sXO]{3}/", $this->board) ||
-        preg_match("/[\\sXO]{6}" . $user . "{3}/", $this->board) ||
-        preg_match("/" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}/", $this->board) ||
-        preg_match("/[\\sXO]{1}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{1}/", $this->board) ||
-        preg_match("/[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "/", $this->board) ||
-        preg_match("/" . $user . "{1}[\\sXO]{3}" . $user . "{1}[\\sXO]{3}" . $user . "{1}/", $this->board) ||
-        preg_match("/[\\sXO]{2}" . $user . "{1}[\\sXO]{1}" . $user . "{1}[\\sXO]{1}" . $user . "{1}[\\sXO]{2}/", $this->board);
+        $topRow = "/" . $user . "{3}[\\sXO]{6}/";
+        $middleRow = "/[\\sXO]{3}" . $user . "{3}[\\sXO]{3}/";
+        $bottomRow = "/[\\sXO]{6}" . $user . "{3}/";
+        $leftColumn = "/" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}/";
+        $middleColumn = "/[\\sXO]{1}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{1}/";
+        $rightColumn = "/[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "{1}[\\sXO]{2}" . $user . "/";
+        $diagonal1 = "/" . $user . "{1}[\\sXO]{3}" . $user . "{1}[\\sXO]{3}" . $user . "{1}/";
+        $diagonal2 = "/[\\sXO]{2}" . $user . "{1}[\\sXO]{1}" . $user . "{1}[\\sXO]{1}" . $user . "{1}[\\sXO]{2}/";
+
+        return preg_match($topRow, $this->board) ||
+            preg_match($middleRow, $this->board) ||
+            preg_match($bottomRow, $this->board) ||
+            preg_match($leftColumn, $this->board) ||
+            preg_match($middleColumn, $this->board) ||
+            preg_match($rightColumn, $this->board) ||
+            preg_match($diagonal1, $this->board) ||
+            preg_match($diagonal2, $this->board);
     }
 
     private function checkDraw() {
@@ -263,13 +269,16 @@ class TicTacToeGame {
             $this->printRow('2', substr($this->board, 3, 3), true) .
             $this->printRow('1', substr($this->board, 6, 3), true) .
             "     a   b   c ``` ";
-        if ($this->currentPlayer < 2) {
+
+        if ($this->currentPlayer == static::PLAYER1_TURN || $this->currentPlayer == static::PLAYER2_TURN) {
             $status .= "It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn!";
-        } else if ($this->currentPlayer == 2 || $this->currentPlayer == 3 || $this->currentPlayer == 4) {
-            if ($this->currentPlayer < 4) {
-                $status .= "Game's over! <@" . $this->playerToName[$this->currentPlayer-2] . "> is the winner!";
-            } else {
+        } else if ($this->currentPlayer == static::PLAYER1_WON ||
+            $this->currentPlayer == static::PLAYER2_WON ||
+            $this->currentPlayer == static::DRAW) {
+            if ($this->currentPlayer == static::DRAW) {
                 $status .= "Game's over! It's a draw!";
+            } else {
+                $status .= "Game's over! <@" . $this->playerToName[$this->currentPlayer-2] . "> is the winner!";
             }
             $status .= "\n\nTo start a new game, issue the command /ttt @username";
         }
@@ -288,9 +297,4 @@ class TicTacToeGame {
         return $str;
     }
 }
-
-
-
-
-
 ?>
