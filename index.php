@@ -21,7 +21,7 @@ function testInit() {
     $request['user_id'] = 'U3195GSCE';
     $request['user_name'] = 'preddy'; //'oxo';
     $request['command'] = '/ttt';
-    $request['text'] = "c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
+    $request['text'] = 'a1'; //'@oxo'; //"c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
     return $request;
 }
@@ -36,40 +36,6 @@ class Utilities {
     static function validateRequest($request) {
         static::verify($request["token"] == "D7uhgjErhug6wBAbBi2Ebudn", "Requests must come from Slack");
     }
-
-    static function createTicTacToeCommand($request) {
-        $text = $request['text'];
-
-        $newGameMatches = array();
-        $movePlayedMatches = array();
-        $displayBoardMatches = array();
-
-        preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
-        preg_match("/([abc][123])/i", $text, $movePlayedMatches);
-        preg_match("/display/i", $text, $displayBoardMatches);
-
-        if (count($newGameMatches) > 0) {
-            return new NewGameCommand($newGameMatches[1]);
-        } else if (count($movePlayedMatches)) {
-            return new PlayMoveCommand($movePlayedMatches[1]);
-        } else if (count($displayBoardMatches)) {
-            return new DisplayBoardCommand();
-        } else {
-            return null;
-        }
-    }
-
-}
-
-class NewGameCommand {
-    public $username;
-    function __construct($username) { $this->username = $username; }
-}
-class PlayMoveCommand {
-    public $move;
-    function __construct($move) { $this->move = $move; }
-}
-class DisplayBoardCommand {
 
 }
 
@@ -88,16 +54,26 @@ class TicTacToeApplication {
     function executeRequest($request) {
         $this->request = $request;
         try {
-            $command = Utilities::createTicTacToeCommand($this->request);
+            $text = $request['text'];
 
-            Utilities::verify(!is_null($command), $this->request["text"] . " is not a valid command.");
-            if ($command instanceof NewGameCommand) {
-                $game = $this->createTicTacToeGame($command->username);
-            } else if ($command instanceof PlayMoveCommand) {
-                $game = $this->playTicTacToeGame($command->move);
-            } else if ($command instanceof DisplayBoardCommand) {
+            $newGameMatches = array();
+            $movePlayedMatches = array();
+            $displayBoardMatches = array();
+
+            preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
+            preg_match("/([abc][123])/i", $text, $movePlayedMatches);
+            preg_match("/display/i", $text, $displayBoardMatches);
+
+            $game = null;
+            if (count($newGameMatches) > 0) {
+                $game = $this->createTicTacToeGame($newGameMatches[0]);
+            } else if (count($movePlayedMatches)) {
+                $game = $this->playTicTacToeGame($movePlayedMatches[0]);
+            } else if (count($displayBoardMatches)) {
                 $game = $this->displayTicTacToeGame();
             }
+            Utilities::verify(!is_null($game), $text . " is not a valid command.");
+
             return json_encode([
                 "response_type" => "in_channel",
                 "text" => $game->getStatus()
@@ -112,16 +88,8 @@ class TicTacToeApplication {
 
     function getBoardFromDb($deleteIfCompleted=false) {
 
-        $token = $this->request['token'];
         $teamId = $this->request['team_id'];
-        $teamDomain = $this->request['team_domain'];
         $channelId = $this->request['channel_id'];
-        $channelName = $this->request['channel_name'];
-        $userId = $this->request['user_id'];
-        $userName = $this->request['user_name'];
-        $command = $this->request['command'];
-        $text = $this->request['text'];
-        $responseUrl = $this->request['response_url'];
 
         $query = "select * from open_games where team_id = '$teamId' and channel_id = '$channelId'";
         $results = $this->dbConnection->query($query);
