@@ -8,10 +8,10 @@ function connectToDb() {
     global $conn;
 
     $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
-    $servername = $dbopts["host"];
-    $username = $dbopts["user"];
-    $password = $dbopts["pass"];
-    $dbName = $dbopts["path"];
+    $servername = "localhost"; //$dbopts["host"];
+    $username = "root"; //$dbopts["user"];
+    $password = ""; //$dbopts["pass"];
+    $dbName = "test"; //$dbopts["path"];
 
     try {
         $conn = new PDO("mysql:host=$servername;dbname=" . ltrim($dbName,'/'), $username, $password);
@@ -194,9 +194,10 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
         //echo"no rows\n";
         return null;
     } else {
-        verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
+//        verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
 
         foreach ($results as $row) {
+            error_log(implode("", $row));
             $game = new TicTacToeGame(
                 $row['team_id'],
                 $row['channel_id'],
@@ -269,10 +270,10 @@ function testInit() {
     $request['user_id'] = 'U3195GSCE';
     $request['user_name'] = 'preddy'; //'oxo';
     $request['command'] = '/ttt';
-    $request['text'] = '@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
+    $request['text'] = "c3"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
-    return $_REQUEST;
-    //return $request;
+//    return $_REQUEST;
+    return $request;
 }
 
 function verify($condition, $message) {
