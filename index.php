@@ -108,7 +108,7 @@ class TicTacToeGame {
     {
         verify(
             $userName == $this->playerToName[$this->currentPlayer],
-            "@" . $userName . ", it's not your turn!  It's @" . $this->playerToName[$this->currentPlayer] . "'s turn"
+            "<@" . $userName . ">, it's not your turn!  It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn"
         );
         verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
 
@@ -155,12 +155,16 @@ class TicTacToeGame {
 
     function getStatus() {
 
-        $status = "```Current Board\n" . $this->printRow(substr($this->board, 0, 3), true) . $this->printRow(substr($this->board, 3, 3), true) . $this->printRow(substr($this->board, 6, 3)) . " ``` ";
+        $status = "```Current Board\n" .
+            $this->printRow('a', substr($this->board, 0, 3), true) .
+            $this->printRow('b', substr($this->board, 3, 3), true) .
+            $this->printRow('c', substr($this->board, 6, 3), true) .
+            "\n  a   b   c\n ```";
         if ($this->currentPlayer < 2) {
-            $status .= "It's @" . $this->playerToName[$this->currentPlayer] . "'s turn!";
+            $status .= "It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn!";
         } else if ($this->currentPlayer == 2 || $this->currentPlayer == 3 || $this->currentPlayer == 4) {
             if ($this->currentPlayer < 4) {
-                $status .= "Game's over! @" . $this->playerToName[$this->currentPlayer-2] . " is the winner!";
+                $status .= "Game's over! <@" . $this->playerToName[$this->currentPlayer-2] . "> is the winner!";
             } else {
                 $status .= "Game's over! It's a draw!";
             }
@@ -170,8 +174,8 @@ class TicTacToeGame {
         return $status;
     }
 
-    private function printRow($string, $withLine=false) {
-        $str = "|";
+    private function printRow($rowLetter, $string, $withLine=false) {
+        $str = "$rowLetter  |";
         for($i = 0; $i < 3; $i++) {
             $str .= " " . substr($string, $i, 1) . " |";
         }
