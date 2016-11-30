@@ -104,9 +104,12 @@ class TicTacToeGame {
         $conn->query($query);
     }
 
-    function play($square)
+    function play($square, $userName)
     {
-
+        verify(
+            $userName == $this->playerToName[$this->currentPlayer],
+            "@" . $userName . ", it's not your turn!  It's @" . $this->playerToName[$this->currentPlayer] . "'s turn"
+        );
         verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
 
         // echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
@@ -258,11 +261,10 @@ function displayTicTacToeGame($request) {
 function playTicTacToeGame($request, $position) {
 
     $board = getBoardFromDb($request);
-    // echo "succesffully got board\n";
 
     verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
 
-    $board->play($position);
+    $board->play($position, $request['user_name']);
     $board->saveToDb();
     return $board->getStatus();
 
