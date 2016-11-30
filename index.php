@@ -152,7 +152,7 @@ class TicTacToeGame {
 
     function getStatus() {
 
-        $status = "CURRENT BOARD: \n\n" . $this->printRow(substr($this->board, 0, 3), true) . $this->printRow(substr($this->board, 3, 3), true) . $this->printRow(substr($this->board, 6, 3)) . "\n\n";
+        $status = "CURRENT BOARD: ```" . $this->printRow(substr($this->board, 0, 3), true) . $this->printRow(substr($this->board, 3, 3), true) . $this->printRow(substr($this->board, 6, 3)) . "```";
         if ($this->currentPlayer < 2) {
             $status .= "It's @" . $this->playerToName[$this->currentPlayer] . "'s turn!";
         } else if ($this->currentPlayer == 2 || $this->currentPlayer == 3 || $this->currentPlayer == 4) {
