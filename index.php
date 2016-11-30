@@ -20,8 +20,20 @@ class Utilities {
 }
 
 class TicTacToeApplication {
-    private $dbConnection = null;
-    private $request = null;
+    private $host;
+    private $user;
+    private $password;
+    private $database;
+    private $dbConnection;
+    private $request;
+
+    function __construct($host, $user, $password, $database) {
+        $this->host = $host;
+        $this->user = $user;
+        $this->password = $password;
+        $this->database = $database;
+    }
+
 
     function executeRequest($request) {
         $this->request = $request;
