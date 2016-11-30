@@ -66,9 +66,9 @@ class TicTacToeApplication {
 
             $game = null;
             if (count($newGameMatches) > 0) {
-                $game = $this->createTicTacToeGame($newGameMatches[0]);
+                $game = $this->createTicTacToeGame($newGameMatches[1]);
             } else if (count($movePlayedMatches)) {
-                $game = $this->playTicTacToeGame($movePlayedMatches[0]);
+                $game = $this->playTicTacToeGame($movePlayedMatches[1]);
             } else if (count($displayBoardMatches)) {
                 $game = $this->displayTicTacToeGame();
             }
