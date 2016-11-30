@@ -20,7 +20,7 @@ function testInit() {
     $request['user_id'] = 'U3195GSCE';
     $request['user_name'] = 'preddy'; //'oxo';
     $request['command'] = '/ttt';
-    $request['text'] = 'a1'; //'@oxo'; //"c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
+    $request['text'] = '@oxo'; //"c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
     return $request;
 }
@@ -104,9 +104,7 @@ class TicTacToeApplication {
                     $row['team_id'],
                     $row['channel_id'],
                     $row['current_player'],
-                    $row['initiating_user'],
                     $row['initiating_user_name'],
-                    $row['other_user'],
                     $row['other_user_name'],
                     $row['board']
                 );
