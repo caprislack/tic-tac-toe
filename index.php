@@ -38,28 +38,25 @@ function init() {
     preg_match("/([abc][123])/i", $text, $movePlayedMatches);
     preg_match("/display/i", $text, $displayBoardMatches);
 
-    $board = null;
+    $returnText = null;
 
     try {
         if (count($newGameMatches) > 0) {
-            createTicTacToeGame($request, $newGameMatches[1]);
+            $returnText = createTicTacToeGame($request, $newGameMatches[1]);
         } else if (count($movePlayedMatches)) {
-            playTicTacToeGame($request, $movePlayedMatches[1]);
+            $returnText = playTicTacToeGame($request, $movePlayedMatches[1]);
         } else if (count($displayBoardMatches)) {
-            displayTicTacToeGame($request);
+            $returnText = displayTicTacToeGame($request);
         } else {
-            verify(false, "Invalid command.");
+            $returnText = verify(false, "Invalid command.");
         }
     } catch (Exception $e) {
-        // echo "There was a problem with your command: " . $e->getMessage() . "\n";
+        $returnText = "There was a problem with your command: " . $e->getMessage();
     }
 
     $data = [
         "response_type" => "in_channel",
-        "text" => "blah",
-        "attachments" => [
-            "text" => "Partly cloudy today and tomorrow"
-        ]
+        "text" => $returnText . "blah ```blah``` blah",
     ];
     echo json_encode($data);
 
@@ -248,14 +245,14 @@ function createTicTacToeGame($request, $user2) {
         $user2
     );
     $game->saveToDb();
-    // echo $game->getStatus();
+    return $game->getStatus();
 }
 
 function displayTicTacToeGame($request) {
 
     $board = getBoardFromDb($request);
     verify(!is_null($board), "There is no ongoing game.");
-    // echo $board->getStatus();
+    return $board->getStatus();
 }
 
 function playTicTacToeGame($request, $position) {
@@ -267,7 +264,7 @@ function playTicTacToeGame($request, $position) {
 
     $board->play($position);
     $board->saveToDb();
-    // echo $board->getStatus();
+    return $board->getStatus();
 
 }
 
