@@ -69,7 +69,9 @@ class PlayMoveCommand {
     public $move;
     function __construct($move) { $this->move = $move; }
 }
-class DisplayBoardCommand
+class DisplayBoardCommand {
+    
+}
 
 class TicTacToeApplication {
     private $dbConnection = null;
