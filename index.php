@@ -40,8 +40,9 @@ class TicTacToeApplication {
     function __construct($host, $user, $password, $database) {
         try {
             $this->dbConnection = new PDO("mysql:host=$host;dbname=" . ltrim($database,'/'), $user, $password);
+            echo "successful!";
         } catch(PDOException $e) {
-
+            echo "not successful!";
         }
     }
 
@@ -75,6 +76,7 @@ class TicTacToeApplication {
         } catch (Exception $e) {
             $returnText = "There was a problem with your command: " . $e->getMessage();
             return json_encode([
+                "response_type" => "in_channel",
                 "text" => $returnText,
             ]);
         }
@@ -128,6 +130,7 @@ class TicTacToeApplication {
     }
 
     function createTicTacToeGame($user2) {
+        echo "about to create";
         $oldBoard = $this->getBoardFromDb(true);
         $status = $oldBoard ? $oldBoard->getStatus() : "";
         Utilities::verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
