@@ -5,6 +5,7 @@ header('Content-Type: application/json');
 
 $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
 $app = new TicTacToeApplication($dbopts["host"], $dbopts["user"], $dbopts["pass"], $dbopts["path"]);
+$app->validateRequest($_REQUEST);
 echo $app->executeRequest($_REQUEST);
 
 //$app = new TicTacToeApplication("localhost", "root", "", "test");
@@ -31,7 +32,44 @@ class Utilities {
             throw new Exception($message);
         }
     }
+
+    static function validateRequest($request) {
+        static::verify($request["token"] == "D7uhgjErhug6wBAbBi2Ebudn", "Requests must come from Slack");
+    }
+
+    static function createTicTacToeCommand($request) {
+        $text = $request['text'];
+
+        $newGameMatches = array();
+        $movePlayedMatches = array();
+        $displayBoardMatches = array();
+
+        preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
+        preg_match("/([abc][123])/i", $text, $movePlayedMatches);
+        preg_match("/display/i", $text, $displayBoardMatches);
+
+        if (count($newGameMatches) > 0) {
+            new NewGameCommand($newGameMatches[1]);
+        } else if (count($movePlayedMatches)) {
+            new PlayMoveCommand($movePlayedMatches[1]);
+        } else if (count($displayBoardMatches)) {
+            new DisplayBoardCommand();
+        } else {
+            return null;
+        }
+    }
+
 }
+
+class NewGameCommand {
+    public $username;
+    function __construct($username) { $this->username = $username; }
+}
+class PlayMoveCommand {
+    public $move;
+    function __construct($move) { $this->move = $move; }
+}
+class DisplayBoardCommand
 
 class TicTacToeApplication {
     private $dbConnection = null;
@@ -45,36 +83,26 @@ class TicTacToeApplication {
     }
 
     function executeRequest($request) {
-
         $this->request = $request;
-        $newGameMatches = array();
-        $movePlayedMatches = array();
-        $displayBoardMatches = array();
-
-        $text = $this->request['text'];
-        preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
-        preg_match("/([abc][123])/i", $text, $movePlayedMatches);
-        preg_match("/display/i", $text, $displayBoardMatches);
-
         try {
-            if (count($newGameMatches) > 0) {
-                $returnText = $this->createTicTacToeGame($newGameMatches[1]);
-            } else if (count($movePlayedMatches)) {
-                $returnText = $this->playTicTacToeGame($movePlayedMatches[1]);
-            } else if (count($displayBoardMatches)) {
-                $returnText = $this->displayTicTacToeGame();
-            } else {
-                $returnText = Utilities::verify(false, "Invalid command.");
+            $command = Utilities::createTicTacToeCommand($this->request);
+
+            Utilities::verify(!is_null($command), $command . " is not a valid command.");
+            if ($command instanceof NewGameCommand) {
+                $game = $this->createTicTacToeGame($command->username);
+            } else if ($command instanceof PlayMoveCommand) {
+                $game = $this->playTicTacToeGame($command->move);
+            } else if ($command instanceof DisplayBoardCommand) {
+                $game = $this->displayTicTacToeGame();
             }
             return json_encode([
                 "response_type" => "in_channel",
-                "text" => $returnText,
+                "text" => $game->getStatus()
             ]);
 
         } catch (Exception $e) {
-            $returnText = "There was a problem with your command: " . $e->getMessage();
             return json_encode([
-                "text" => $returnText,
+                "text" => "There was a problem with your command: " . $e->getMessage()
             ]);
         }
     }
@@ -142,14 +170,14 @@ class TicTacToeApplication {
             $user2
         );
         $game->saveToDb();
-        return $game->getStatus();
+        return $game;
     }
 
     function displayTicTacToeGame() {
 
         $board = $this->getBoardFromDb($this->request);
         Utilities::verify(!is_null($board), "There is no ongoing game.");
-        return $board->getStatus();
+        return $board;
     }
 
     function playTicTacToeGame($position) {
@@ -160,7 +188,7 @@ class TicTacToeApplication {
 
         $board->play($position, $this->request['user_name']);
         $board->saveToDb();
-        return $board->getStatus();
+        return $board;
 
     }
 }
