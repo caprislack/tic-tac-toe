@@ -56,7 +56,7 @@ function init() {
 
     $data = [
         "response_type" => "in_channel",
-        "text" => $returnText . "blah ```blah``` blah",
+        "text" => $returnText,
     ];
     echo json_encode($data);
 
@@ -152,7 +152,7 @@ class TicTacToeGame {
 
     function getStatus() {
 
-        $status = "CURRENT BOARD: ```" . $this->printRow(substr($this->board, 0, 3), true) . $this->printRow(substr($this->board, 3, 3), true) . $this->printRow(substr($this->board, 6, 3)) . "```";
+        $status = "```Current Board\n" . $this->printRow(substr($this->board, 0, 3), true) . $this->printRow(substr($this->board, 3, 3), true) . $this->printRow(substr($this->board, 6, 3)) . "```";
         if ($this->currentPlayer < 2) {
             $status .= "It's @" . $this->playerToName[$this->currentPlayer] . "'s turn!";
         } else if ($this->currentPlayer == 2 || $this->currentPlayer == 3 || $this->currentPlayer == 4) {
@@ -281,6 +281,7 @@ function testInit() {
     $request['command'] = '/ttt';
     $request['text'] = "c3"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
+    print_r($_REQUEST);
     return $_REQUEST;
     // return $request;
 }
