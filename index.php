@@ -197,7 +197,7 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
 //        verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
 
         foreach ($results as $row) {
-            error_log(implode("", $row));
+            print_r($row);
             $game = new TicTacToeGame(
                 $row['team_id'],
                 $row['channel_id'],
@@ -212,6 +212,7 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
             if ($deleteIfCompleted && ($row['current_player']  == 2 || $row['current_player'] == 3 || $row['current_player'] == 4)) {
                 $deleteQuery = "delete from open_games where team_id = '$teamId' and channel_id = '$channelId' limit 1";
                 echo "query = " . $deleteQuery . "\n";
+                echo "about to delete existing row bc its done\n";
                 $conn->query($deleteQuery);
                 return null;
             } else {
@@ -250,6 +251,7 @@ function displayTicTacToeGame($request) {
 function playTicTacToeGame($request, $position) {
 
     $board = getBoardFromDb($request);
+    echo "succesffully got board\n";
 
     verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
 
@@ -272,8 +274,8 @@ function testInit() {
     $request['command'] = '/ttt';
     $request['text'] = "c3"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
     $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
-//    return $_REQUEST;
-    return $request;
+    return $_REQUEST;
+    // return $request;
 }
 
 function verify($condition, $message) {
