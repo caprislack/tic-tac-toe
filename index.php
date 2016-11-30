@@ -7,7 +7,7 @@ $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
 $app = new TicTacToeApplication($dbopts["host"], $dbopts["user"], $dbopts["pass"], $dbopts["path"]);
 $app->validateRequest($_REQUEST);
 echo $app->executeRequest($_REQUEST);
-
+//
 //$app = new TicTacToeApplication("localhost", "root", "", "test");
 //echo $app->executeRequest(testInit());
 
@@ -49,11 +49,11 @@ class Utilities {
         preg_match("/display/i", $text, $displayBoardMatches);
 
         if (count($newGameMatches) > 0) {
-            new NewGameCommand($newGameMatches[1]);
+            return new NewGameCommand($newGameMatches[1]);
         } else if (count($movePlayedMatches)) {
-            new PlayMoveCommand($movePlayedMatches[1]);
+            return new PlayMoveCommand($movePlayedMatches[1]);
         } else if (count($displayBoardMatches)) {
-            new DisplayBoardCommand();
+            return new DisplayBoardCommand();
         } else {
             return null;
         }
@@ -70,7 +70,7 @@ class PlayMoveCommand {
     function __construct($move) { $this->move = $move; }
 }
 class DisplayBoardCommand {
-    
+
 }
 
 class TicTacToeApplication {
@@ -81,6 +81,7 @@ class TicTacToeApplication {
         try {
             $this->dbConnection = new PDO("mysql:host=$host;dbname=" . ltrim($database,'/'), $user, $password);
         } catch(PDOException $e) {
+
         }
     }
 
@@ -89,7 +90,7 @@ class TicTacToeApplication {
         try {
             $command = Utilities::createTicTacToeCommand($this->request);
 
-            Utilities::verify(!is_null($command), $command . " is not a valid command.");
+            Utilities::verify(!is_null($command), $this->request["text"] . " is not a valid command.");
             if ($command instanceof NewGameCommand) {
                 $game = $this->createTicTacToeGame($command->username);
             } else if ($command instanceof PlayMoveCommand) {
