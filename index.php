@@ -5,7 +5,6 @@ header('Content-Type: application/json');
 
 $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
 $app = new TicTacToeApplication($dbopts["host"], $dbopts["user"], $dbopts["pass"], $dbopts["path"]);
-$app->validateRequest($_REQUEST);
 echo $app->executeRequest($_REQUEST);
 //
 //$app = new TicTacToeApplication("localhost", "root", "", "test");
@@ -54,6 +53,7 @@ class TicTacToeApplication {
     function executeRequest($request) {
         $this->request = $request;
         try {
+            Utilities::validateRequest($this->request);
             $text = $request['text'];
 
             $newGameMatches = array();
