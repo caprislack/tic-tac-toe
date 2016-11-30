@@ -8,10 +8,10 @@ function connectToDb() {
     global $conn;
 
     $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
-    $servername = "localhost"; //$dbopts["host"];
-    $username = "root"; //$dbopts["user"];
-    $password = ""; //$dbopts["pass"];
-    $dbName = "test"; //$dbopts["path"];
+    $servername = $dbopts["host"];
+    $username = $dbopts["user"];
+    $password = $dbopts["pass"];
+    $dbName = $dbopts["path"];
 
     try {
         $conn = new PDO("mysql:host=$servername;dbname=" . ltrim($dbName,'/'), $username, $password);
