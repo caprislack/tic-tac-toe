@@ -1,6 +1,7 @@
 
 <?php
 
+header('Content-Type: application/json');
 init();
 
 $conn = null;
@@ -50,8 +51,17 @@ function init() {
             verify(false, "Invalid command.");
         }
     } catch (Exception $e) {
-        echo "There was a problem with your command: " . $e->getMessage() . "\n";
+        // echo "There was a problem with your command: " . $e->getMessage() . "\n";
     }
+
+    $data = [
+        "response_type" => "in_channel",
+        "text" => "blah",
+        "attachments" => [
+            "text" => "Partly cloudy today and tomorrow"
+        ]
+    ];
+    echo json_encode($data);
 
 }
 
@@ -93,7 +103,7 @@ class TicTacToeGame {
                     values ('$this->teamId', '$this->channelId', '$this->user1', '$this->username1', '$this->user2', '$this->username2', '$this->currentPlayer', '$this->board')
                     on duplicate key
                     update current_player='$this->currentPlayer', board='$this->board'";
-        echo "query = " . $query . "\n";
+        // echo "query = " . $query . "\n";
         $conn->query($query);
     }
 
@@ -102,22 +112,22 @@ class TicTacToeGame {
 
         verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
 
-        echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
+        // echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
         $index = $this->map[$square];
-        echo "about to replace index = " . $index . "\n";
+        // echo "about to replace index = " . $index . "\n";
         $currentCharacter = substr($this->board, $index, 1);
-        echo "character we're about to replace = " . $currentCharacter . "\n";
+        // echo "character we're about to replace = " . $currentCharacter . "\n";
         verify($currentCharacter == ' ', "Playing in a space that's already taken.  \n\n" . $this->getStatus());
         $this->board = substr_replace($this->board, $this->playerToCharacter[$this->currentPlayer], $index, 1);
 
-        echo "board = " . $this->board . "\n";
+        // echo "board = " . $this->board . "\n";
 
         // check if winning board & update $currentPlayer var
         if ($this->checkWinner($this->playerToCharacter[$this->currentPlayer])) {
-            echo "PLAYER $this->currentPlayer WON!\n";
+            // echo "PLAYER $this->currentPlayer WON!\n";
             $this->currentPlayer += 2;
         } else if ($this->checkDraw()) {
-            echo "DRAW!\n";
+            // echo "DRAW!\n";
             $this->currentPlayer = 4;
         } else {
             if ($this->currentPlayer == 0) {
@@ -197,7 +207,7 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
 //        verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
 
         foreach ($results as $row) {
-            print_r($row);
+            // print_r($row);
             $game = new TicTacToeGame(
                 $row['team_id'],
                 $row['channel_id'],
@@ -211,8 +221,8 @@ function getBoardFromDb($request, $deleteIfCompleted=false) {
 
             if ($deleteIfCompleted && ($row['current_player']  == 2 || $row['current_player'] == 3 || $row['current_player'] == 4)) {
                 $deleteQuery = "delete from open_games where team_id = '$teamId' and channel_id = '$channelId' limit 1";
-                echo "query = " . $deleteQuery . "\n";
-                echo "about to delete existing row bc its done\n";
+                // echo "query = " . $deleteQuery . "\n";
+                // echo "about to delete existing row bc its done\n";
                 $conn->query($deleteQuery);
                 return null;
             } else {
@@ -238,26 +248,26 @@ function createTicTacToeGame($request, $user2) {
         $user2
     );
     $game->saveToDb();
-    echo $game->getStatus();
+    // echo $game->getStatus();
 }
 
 function displayTicTacToeGame($request) {
 
     $board = getBoardFromDb($request);
     verify(!is_null($board), "There is no ongoing game.");
-    echo $board->getStatus();
+    // echo $board->getStatus();
 }
 
 function playTicTacToeGame($request, $position) {
 
     $board = getBoardFromDb($request);
-    echo "succesffully got board\n";
+    // echo "succesffully got board\n";
 
     verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
 
     $board->play($position);
     $board->saveToDb();
-    echo $board->getStatus();
+    // echo $board->getStatus();
 
 }
 
