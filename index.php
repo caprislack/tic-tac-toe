@@ -66,7 +66,6 @@ class TicTacToeApplication {
             } else {
                 $returnText = Utilities::verify(false, "Invalid command.");
             }
-            echo $returnText;
             return json_encode([
                 "response_type" => "in_channel",
                 "text" => $returnText,
@@ -74,7 +73,6 @@ class TicTacToeApplication {
 
         } catch (Exception $e) {
             $returnText = "There was a problem with your command: " . $e->getMessage();
-            echo $returnText;
             return json_encode([
                 "text" => $returnText,
             ]);
@@ -129,7 +127,6 @@ class TicTacToeApplication {
     }
 
     function createTicTacToeGame($user2) {
-        echo "creating";
         $oldBoard = $this->getBoardFromDb(true);
         $status = $oldBoard ? $oldBoard->getStatus() : "";
         Utilities::verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
