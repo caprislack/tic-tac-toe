@@ -129,14 +129,15 @@ class TicTacToeApplication {
     }
 
     function createTicTacToeGame($user2) {
+        echo "creating";
         $oldBoard = $this->getBoardFromDb(true);
         $status = $oldBoard ? $oldBoard->getStatus() : "";
         Utilities::verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
 
-        $channelId = $this->request['channel_id'];
         $game = new TicTacToeGame(
+            $this->dbConnection,
             $this->request['team_id'],
-            $channelId,
+            $this->request['channel_id'],
             1,
             $this->request['user_id'],
             $this->request['user_name'],
