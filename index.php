@@ -6,24 +6,6 @@ header('Content-Type: application/json');
 $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
 $app = new TicTacToeApplication($dbopts["host"], $dbopts["user"], $dbopts["pass"], $dbopts["path"]);
 echo $app->executeRequest($_REQUEST);
-//
-//$app = new TicTacToeApplication("localhost", "root", "", "test");
-//echo $app->executeRequest(testInit());
-
-function testInit() {
-    $request = array();
-    $request['token'] = 'D7uhgjErhug6wBAbBi2Ebudn';
-    $request['team_id'] = '1';
-    $request['team_domain'] = 'ae32731568test0';
-    $request['channel_id'] = '2';
-    $request['channel_name'] = 'privategroup';
-    $request['user_id'] = 'U3195GSCE';
-    $request['user_name'] = 'preddy'; //'oxo';
-    $request['command'] = '/ttt';
-    $request['text'] = '@oxo'; //"c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
-    $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
-    return $request;
-}
 
 class Utilities {
     static function verify($condition, $message) {
@@ -35,24 +17,17 @@ class Utilities {
     static function validateRequest($request) {
         static::verify($request["token"] == "D7uhgjErhug6wBAbBi2Ebudn", "Requests must come from Slack");
     }
-
 }
 
 class TicTacToeApplication {
     private $dbConnection = null;
     private $request = null;
 
-    function __construct($host, $user, $password, $database) {
-        try {
-            $this->dbConnection = new PDO("mysql:host=$host;dbname=" . ltrim($database,'/'), $user, $password);
-        } catch(PDOException $e) {
-
-        }
-    }
-
     function executeRequest($request) {
         $this->request = $request;
         try {
+            $this->dbConnection = new PDO("mysql:host=$this->host;dbname=" . ltrim($this->database,'/'), $this->user, $this->password);
+
             Utilities::validateRequest($this->request);
             $text = $request['text'];
 
@@ -81,7 +56,7 @@ class TicTacToeApplication {
 
         } catch (Exception $e) {
             return json_encode([
-                "text" => "There was a problem with your command: " . $e->getMessage()
+                "text" => "There was a problem: " . $e->getMessage()
             ]);
         }
     }
@@ -183,7 +158,9 @@ class TicTacToeGame {
         $this->board = $board;
 
         $this->playerToName[0] = $this->username1;
+        $this->playerToName[2] = $this->username1;
         $this->playerToName[1] = $this->username2;
+        $this->playerToName[3] = $this->username2;
     }
 
     function saveToDb() {
@@ -224,15 +201,51 @@ class TicTacToeGame {
         $this->board = substr_replace($this->board, $this->playerToCharacter[$this->currentPlayer], $index, 1);
 
         if ($this->checkWinner($this->playerToCharacter[$this->currentPlayer])) {
-            $this->currentPlayer += 2;
+            $this->changeCurrentPlayerToWinner();
         } else if ($this->checkDraw()) {
-            $this->currentPlayer = 4;
+            $this->currentPlayer = static::DRAW;
         } else {
-            if ($this->currentPlayer == 0) {
-                $this->currentPlayer = 1;
+            $this->changeCurrentPlayerToNextPlayer();
+        }
+    }
+
+    function getStatus() {
+
+        $status = "```Current Board\n\n" .
+            $this->getRow('3', substr($this->board, 0, 3), true) .
+            $this->getRow('2', substr($this->board, 3, 3), true) .
+            $this->getRow('1', substr($this->board, 6, 3), true) .
+            "     a   b   c ``` ";
+
+        if ($this->currentPlayer == static::PLAYER1_TURN || $this->currentPlayer == static::PLAYER2_TURN) {
+            $status .= "It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn!";
+        } else if ($this->currentPlayer == static::PLAYER1_WON ||
+            $this->currentPlayer == static::PLAYER2_WON ||
+            $this->currentPlayer == static::DRAW) {
+            if ($this->currentPlayer == static::DRAW) {
+                $status .= "Game's over! It's a draw!";
             } else {
-                $this->currentPlayer = 0;
+                $status .= "Game's over! <@" . $this->playerToName[$this->currentPlayer] . "> is the winner!";
             }
+            $status .= "\n\nTo start a new game, issue the command /ttt @username";
+        }
+
+        return $status;
+    }
+
+    private function changeCurrentPlayerToWinner() {
+        if ($this->currentPlayer == static::PLAYER1_TURN) {
+            $this->currentPlayer = static::PLAYER1_WON;
+        } else if ($this->currentPlayer == static::PLAYER2_TURN) {
+            $this->currentPlayer = static::PLAYER2_WON;
+        }
+    }
+
+    private function changeCurrentPlayerToNextPlayer() {
+        if ($this->currentPlayer == static::PLAYER1_TURN) {
+            $this->currentPlayer = static::PLAYER2_TURN;
+        } else {
+            $this->currentPlayer = static::PLAYER1_TURN;
         }
     }
 
@@ -260,31 +273,7 @@ class TicTacToeGame {
         return preg_match("/[XO]{9}/", $this->board);
     }
 
-    function getStatus() {
-
-        $status = "```Current Board\n\n" .
-            $this->printRow('3', substr($this->board, 0, 3), true) .
-            $this->printRow('2', substr($this->board, 3, 3), true) .
-            $this->printRow('1', substr($this->board, 6, 3), true) .
-            "     a   b   c ``` ";
-
-        if ($this->currentPlayer == static::PLAYER1_TURN || $this->currentPlayer == static::PLAYER2_TURN) {
-            $status .= "It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn!";
-        } else if ($this->currentPlayer == static::PLAYER1_WON ||
-            $this->currentPlayer == static::PLAYER2_WON ||
-            $this->currentPlayer == static::DRAW) {
-            if ($this->currentPlayer == static::DRAW) {
-                $status .= "Game's over! It's a draw!";
-            } else {
-                $status .= "Game's over! <@" . $this->playerToName[$this->currentPlayer-2] . "> is the winner!";
-            }
-            $status .= "\n\nTo start a new game, issue the command /ttt @username";
-        }
-
-        return $status;
-    }
-
-    private function printRow($rowLetter, $string, $withLine=false) {
+    private function getRow($rowLetter, $string, $withLine=false) {
         $str = "$rowLetter  |";
         for($i = 0; $i < 3; $i++) {
             $str .= " " . substr($string, $i, 1) . " |";
