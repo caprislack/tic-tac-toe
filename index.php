@@ -2,64 +2,168 @@
 <?php
 
 header('Content-Type: application/json');
-init();
 
-$conn = null;
-function connectToDb() {
-    global $conn;
+$dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
+$app = new TicTacToeApplication($dbopts["host"], $dbopts["user"], $dbopts["pass"], $dbopts["path"]);
+$app->executeRequest($_REQUEST);
 
-    $dbopts = parse_url(getenv('CLEARDB_DATABASE_URL'));
-    $servername = $dbopts["host"];
-    $username = $dbopts["user"];
-    $password = $dbopts["pass"];
-    $dbName = $dbopts["path"];
+//$app = new TicTacToeApplication("localhost", "root", "", "test");
+//echo $app->executeRequest(testInit());
 
-    try {
-        $conn = new PDO("mysql:host=$servername;dbname=" . ltrim($dbName,'/'), $username, $password);
-        // set the PDO error mode to exception
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    }
-    catch(PDOException $e)
-    {
-        //echo"Connection failed: " . $e->getMessage();
+function testInit() {
+    $request = array();
+    $request['token'] = 'D7uhgjErhug6wBAbBi2Ebudn';
+    $request['team_id'] = '1';
+    $request['team_domain'] = 'ae32731568test0';
+    $request['channel_id'] = '2';
+    $request['channel_name'] = 'privategroup';
+    $request['user_id'] = 'U3195GSCE';
+    $request['user_name'] = 'preddy'; //'oxo';
+    $request['command'] = '/ttt';
+    $request['text'] = "c2"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
+    $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
+    return $request;
+}
+
+class Utilities {
+    static function verify($condition, $message) {
+        if (!$condition) {
+            throw new Exception($message);
+        }
     }
 }
 
-function init() {
-    connectToDb();
-    $request = testinit();
-    $text = $request['text'];
+class TicTacToeApplication {
+    private $dbConnection = null;
+    private $request = null;
 
-    $newGameMatches = array();
-    $movePlayedMatches = array();
-    $displayBoardMatches = array();
+    function __construct($host, $user, $password, $database) {
+        try {
+            $this->dbConnection = new PDO("mysql:host=$host;dbname=" . ltrim($database,'/'), $user, $password);
+        } catch(PDOException $e) {
 
-    preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
-    preg_match("/([abc][123])/i", $text, $movePlayedMatches);
-    preg_match("/display/i", $text, $displayBoardMatches);
-
-    $returnText = null;
-
-    try {
-        if (count($newGameMatches) > 0) {
-            $returnText = createTicTacToeGame($request, $newGameMatches[1]);
-        } else if (count($movePlayedMatches)) {
-            $returnText = playTicTacToeGame($request, $movePlayedMatches[1]);
-        } else if (count($displayBoardMatches)) {
-            $returnText = displayTicTacToeGame($request);
-        } else {
-            $returnText = verify(false, "Invalid command.");
         }
-    } catch (Exception $e) {
-        $returnText = "There was a problem with your command: " . $e->getMessage();
     }
 
-    $data = [
-        "response_type" => "in_channel",
-        "text" => $returnText,
-    ];
-    echo json_encode($data);
+    function executeRequest($request) {
 
+        $this->request = $request;
+        $newGameMatches = array();
+        $movePlayedMatches = array();
+        $displayBoardMatches = array();
+
+        $text = $this->request['text'];
+        preg_match("/[@]([a-zA-Z0-9]+)/i", $text, $newGameMatches);
+        preg_match("/([abc][123])/i", $text, $movePlayedMatches);
+        preg_match("/display/i", $text, $displayBoardMatches);
+
+        try {
+            if (count($newGameMatches) > 0) {
+                $returnText = $this->createTicTacToeGame($newGameMatches[1]);
+            } else if (count($movePlayedMatches)) {
+                $returnText = $this->playTicTacToeGame($movePlayedMatches[1]);
+            } else if (count($displayBoardMatches)) {
+                $returnText = $this->displayTicTacToeGame();
+            } else {
+                $returnText = Utilities::verify(false, "Invalid command.");
+            }
+            return json_encode([
+                "response_type" => "in_channel",
+                "text" => $returnText,
+            ]);
+
+        } catch (Exception $e) {
+            $returnText = "There was a problem with your command: " . $e->getMessage();
+            return json_encode([
+                "text" => $returnText,
+            ]);
+        }
+    }
+
+    function getBoardFromDb($deleteIfCompleted=false) {
+
+        $token = $this->request['token'];
+        $teamId = $this->request['team_id'];
+        $teamDomain = $this->request['team_domain'];
+        $channelId = $this->request['channel_id'];
+        $channelName = $this->request['channel_name'];
+        $userId = $this->request['user_id'];
+        $userName = $this->request['user_name'];
+        $command = $this->request['command'];
+        $text = $this->request['text'];
+        $responseUrl = $this->request['response_url'];
+
+        $query = "select * from open_games where team_id = '$teamId' and channel_id = '$channelId'";
+        $results = $this->dbConnection->query($query);
+        if ($results->rowCount() == 0) {
+            return null;
+        } else {
+            Utilities::verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
+
+            foreach ($results as $row) {
+                // print_r($row);
+                $game = new TicTacToeGame(
+                    $this->dbConnection,
+                    $row['team_id'],
+                    $row['channel_id'],
+                    $row['current_player'],
+                    $row['initiating_user'],
+                    $row['initiating_user_name'],
+                    $row['other_user'],
+                    $row['other_user_name'],
+                    $row['board']
+                );
+
+                if ($deleteIfCompleted && ($row['current_player']  == 2 || $row['current_player'] == 3 || $row['current_player'] == 4)) {
+                    $deleteQuery = "delete from open_games where team_id = '$teamId' and channel_id = '$channelId' limit 1";
+                    // echo "query = " . $deleteQuery . "\n";
+                    // echo "about to delete existing row bc its done\n";
+                    $this->dbConnection->query($deleteQuery);
+                    return null;
+                } else {
+                    return $game;
+                }
+            }
+        }
+    }
+
+    function createTicTacToeGame($user2) {
+        $oldBoard = $this->getBoardFromDb(true);
+        $status = $oldBoard ? $oldBoard->getStatus() : "";
+        Utilities::verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
+
+        $channelId = $this->request['channel_id'];
+        $game = new TicTacToeGame(
+            $this->request['team_id'],
+            $channelId,
+            1,
+            $this->request['user_id'],
+            $this->request['user_name'],
+            1111,
+            $user2
+        );
+        $game->saveToDb();
+        return $game->getStatus();
+    }
+
+    function displayTicTacToeGame() {
+
+        $board = $this->getBoardFromDb($this->request);
+        Utilities::verify(!is_null($board), "There is no ongoing game.");
+        return $board->getStatus();
+    }
+
+    function playTicTacToeGame($position) {
+
+        $board = $this->getBoardFromDb($this->request);
+
+        Utilities::verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
+
+        $board->play($position, $this->request['user_name']);
+        $board->saveToDb();
+        return $board->getStatus();
+
+    }
 }
 
 class TicTacToeGame {
@@ -77,8 +181,9 @@ class TicTacToeGame {
     private $playerToCharacter = [0 => 'O', 1 => 'X'];
 
     private $playerToName = [];
+    private $dbConnection;
 
-    function __construct($teamId=null, $channelId=null, $currentPlayer=1, $user1=null, $username1=null, $user2=null, $username2=null, $board='         ') {
+    function __construct($dbConnection, $teamId=null, $channelId=null, $currentPlayer=1, $user1=null, $username1=null, $user2=null, $username2=null, $board='         ') {
         $this->teamId = $teamId;
         $this->channelId = $channelId;
         $this->currentPlayer = $currentPlayer;
@@ -90,10 +195,10 @@ class TicTacToeGame {
 
         $this->playerToName[0] = $this->username1;
         $this->playerToName[1] = $this->username2;
+        $this->dbConnection = $dbConnection;
     }
 
     function saveToDb() {
-        global $conn;
 
         $query = "insert into
                     open_games (`team_id`, `channel_id`, `initiating_user`, `initiating_user_name`, `other_user`, `other_user_name`, `current_player`, `board`)
@@ -101,23 +206,23 @@ class TicTacToeGame {
                     on duplicate key
                     update current_player='$this->currentPlayer', board='$this->board'";
         // echo "query = " . $query . "\n";
-        $conn->query($query);
+        $this->dbConnection->query($query);
     }
 
     function play($square, $userName)
     {
-        verify(
+        Utilities::verify(
             $userName == $this->playerToName[$this->currentPlayer],
             "<@" . $userName . ">, it's not your turn!  It's <@" . $this->playerToName[$this->currentPlayer] . ">'s turn"
         );
-        verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
+        Utilities::verify($this->currentPlayer == '0' || $this->currentPlayer == '1', "No more moves allowed.  Game's over! \n\n" . $this->getStatus());
 
-        // echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
+//         echo "User " . $this->currentPlayer . " played at position " . $square . "\n";
         $index = $this->map[$square];
-        // echo "about to replace index = " . $index . "\n";
+//         echo "about to replace index = " . $index . "\n";
         $currentCharacter = substr($this->board, $index, 1);
-        // echo "character we're about to replace = " . $currentCharacter . "\n";
-        verify($currentCharacter == ' ', "Playing in a space that's already taken.  \n\n" . $this->getStatus());
+//         echo "character we're about to replace = " . $currentCharacter . "\n";
+        Utilities::verify($currentCharacter == ' ', "Playing in a space that's already taken.  \n\n" . $this->getStatus());
         $this->board = substr_replace($this->board, $this->playerToCharacter[$this->currentPlayer], $index, 1);
 
         // echo "board = " . $this->board . "\n";
@@ -186,116 +291,7 @@ class TicTacToeGame {
     }
 }
 
-function getBoardFromDb($request, $deleteIfCompleted=false) {
-    global $conn;
 
-    $token = $request['token'];
-    $teamId = $request['team_id'];
-    $teamDomain = $request['team_domain'];
-    $channelId = $request['channel_id'];
-    $channelName = $request['channel_name'];
-    $userId = $request['user_id'];
-    $userName = $request['user_name'];
-    $command = $request['command'];
-    $text = $request['text'];
-    $responseUrl = $request['response_url'];
-
-    $query = "select * from open_games where team_id = '$teamId' and channel_id = '$channelId'";
-    //echo"query = " . $query . "\n";
-
-    $results = $conn->query($query);
-    if ($results->rowCount() == 0) {
-        //echo"no rows\n";
-        return null;
-    } else {
-//        verify($results->rowCount() == 1, "Internal exception... Found more than 1 row for a game.");
-
-        foreach ($results as $row) {
-            // print_r($row);
-            $game = new TicTacToeGame(
-                $row['team_id'],
-                $row['channel_id'],
-                $row['current_player'],
-                $row['initiating_user'],
-                $row['initiating_user_name'],
-                $row['other_user'],
-                $row['other_user_name'],
-                $row['board']
-            );
-
-            if ($deleteIfCompleted && ($row['current_player']  == 2 || $row['current_player'] == 3 || $row['current_player'] == 4)) {
-                $deleteQuery = "delete from open_games where team_id = '$teamId' and channel_id = '$channelId' limit 1";
-                // echo "query = " . $deleteQuery . "\n";
-                // echo "about to delete existing row bc its done\n";
-                $conn->query($deleteQuery);
-                return null;
-            } else {
-                return $game;
-            }
-        }
-    }
-}
-
-function createTicTacToeGame($request, $user2) {
-    $oldBoard = getBoardFromDb($request, true);
-    $status = $oldBoard ? $oldBoard->getStatus() : "";
-    verify(is_null($oldBoard), "Game already exists! \n\n" . $status);
-
-    $channelId = $request['channel_id'];
-    $game = new TicTacToeGame(
-        $request['team_id'],
-        $channelId,
-        1,
-        $request['user_id'],
-        $request['user_name'],
-        1111,
-        $user2
-    );
-    $game->saveToDb();
-    return $game->getStatus();
-}
-
-function displayTicTacToeGame($request) {
-
-    $board = getBoardFromDb($request);
-    verify(!is_null($board), "There is no ongoing game.");
-    return $board->getStatus();
-}
-
-function playTicTacToeGame($request, $position) {
-
-    $board = getBoardFromDb($request);
-
-    verify(!is_null($board), "There is no ongoing game.  To start one, use the command /ttt @username.");
-
-    $board->play($position, $request['user_name']);
-    $board->saveToDb();
-    return $board->getStatus();
-
-}
-
-function testInit() {
-
-    $request = array();
-    $request['token'] = 'D7uhgjErhug6wBAbBi2Ebudn';
-    $request['team_id'] = '1';
-    $request['team_domain'] = 'ae32731568test0';
-    $request['channel_id'] = '2';
-    $request['channel_name'] = 'privategroup';
-    $request['user_id'] = 'U3195GSCE';
-    $request['user_name'] = 'preddy'; //'oxo';
-    $request['command'] = '/ttt';
-    $request['text'] = "c3"; //'@oxo'; //'c1'; $_REQUEST['position']; //'@slackbot';
-    $request['response_url'] = 'https://hooks.slack.com/commands/T2ZTCB1EU/108596885952/xeGk7fDf32RJwSdMZSw2fd8E';
-    return $_REQUEST;
-    // return $request;
-}
-
-function verify($condition, $message) {
-    if (!$condition) {
-        throw new Exception($message);
-    }
-}
 
 
 
